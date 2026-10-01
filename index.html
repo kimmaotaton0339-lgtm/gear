@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>裝備計數</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#E9EDF3; --panel:#F8FAFC; --panel2:#EEF2F7; --ink:#18202E; --muted:#5C6878; --line:#CDD5E0;
+  --gold:#A5761B; --blue:#2463D6; --red:#C8323F; --legend:#C27A00; --crest:#6D48C2; --set:#15876A; --white:#6E7B8C; --other:#56606E;
+  --warn-bg:#FDECEC;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121722; --panel:#1A2130; --panel2:#212A3B; --ink:#E6EAF2; --muted:#98A3B5; --line:#2E3A4F;
+    --gold:#E0B55A; --blue:#6FA2FF; --red:#FF6B76; --legend:#FFB23E; --crest:#AE8BFF; --set:#43C9A2; --white:#B9C3D0; --other:#A7B0BD;
+    --warn-bg:#3A1F25;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121722; --panel:#1A2130; --panel2:#212A3B; --ink:#E6EAF2; --muted:#98A3B5; --line:#2E3A4F;
+  --gold:#E0B55A; --blue:#6FA2FF; --red:#FF6B76; --legend:#FFB23E; --crest:#AE8BFF; --set:#43C9A2; --white:#B9C3D0; --other:#A7B0BD;
+  --warn-bg:#3A1F25;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;font-size:15px;line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+header{padding:18px 20px 14px;border-bottom:2px solid var(--gold);background:var(--panel);display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
+header h1{margin:0;font-size:26px;font-weight:900;letter-spacing:.06em}
+header h1 small{font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0;margin-left:10px}
+.builds{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.wrap{max-width:1280px;margin:0 auto;padding:18px 16px 40px;display:grid;grid-template-columns:minmax(0,1fr) 480px;gap:18px;align-items:start}
+@media (max-width:920px){.wrap{grid-template-columns:minmax(0,1fr)}}
+section.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+section.box > h2{margin:0 0 10px;font-size:17px;font-weight:700;display:flex;gap:10px;align-items:center}
+section.box > h2 .swatch{width:6px;height:18px;border-radius:2px}
+.hint{color:var(--muted);font-size:13px}
+select,input[type=number],input[type=text]{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;min-width:0}
+input[type=number]{width:92px;text-align:right}
+select:focus-visible,input:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+button{cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 10px}
+button:hover{border-color:var(--gold)}
+button.primary{background:var(--gold);color:#fff;border-color:var(--gold)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid currentColor;border-radius:999px;padding:1px 10px;font-size:13px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--set);color:#fff}
+.setvals{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:10px}
+.setvals label{display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--panel2);padding:6px 10px;border-radius:6px}
+
+/* slots */
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+@media (max-width:420px){.slots{grid-template-columns:minmax(0,1fr)}}
+.slot{border:1px solid var(--line);border-radius:8px;background:var(--panel2);padding:10px}
+.slot-head{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.slot-head input{flex:1;font-weight:700;background:transparent;border-color:transparent}
+.slot-head input:hover{border-color:var(--line)}
+.line{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:6px;align-items:center;padding:5px 0;border-top:1px dashed var(--line)}
+.line:first-of-type{border-top:0}
+.tag{font-size:12px;font-weight:700;padding:1px 7px;border-radius:4px;color:#fff;white-space:nowrap}
+.t-blue{background:var(--blue)} .t-red{background:var(--red)} .t-legend{background:var(--legend)} .t-other{background:var(--other)}
+.line select.g{width:66px}
+.slot-head select{width:auto}
+.line input[type=number]{width:84px}
+.cap{grid-column:2 / -1;font-size:12px;color:var(--muted);margin-top:-2px}
+.cap.over{color:var(--red);font-weight:700}
+.x{border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px}
+.x:hover{color:var(--red)}
+.adds{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.adds button,.adds select{font-size:13px;padding:3px 9px}
+.adds .ab-blue{color:var(--blue)} .adds .ab-red{color:var(--red)} .adds .ab-legend{color:var(--legend)}
+.empty{font-size:13px;color:var(--muted);padding:4px 0}
+
+/* summary */
+aside{position:sticky;top:env(safe-area-inset-top,0px)}
+@media (max-width:920px){aside{position:static}}
+.sum{background:var(--panel);border:2px solid var(--gold);border-radius:10px;padding:14px 14px 10px}
+.sum h2{margin:0 0 4px;font-size:18px;font-weight:900;letter-spacing:.04em}
+.legend-keys{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);margin-bottom:8px}
+.legend-keys i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:0}
+.tablewrap{overflow-x:auto;max-height:70vh;overflow-y:auto}
+@media (max-width:920px){.tablewrap{max-height:none}}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:5px 6px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+thead th{position:sticky;top:0;background:var(--panel);font-weight:500;color:var(--muted);font-size:12px}
+td.total{font-weight:900;font-size:15px}
+td.c{color:var(--crest)} td.s{color:var(--set)} td.b{color:var(--blue)} td.r{color:var(--red)} td.l{color:var(--legend)}
+td.z{color:var(--line)}
+td.w{color:var(--white)}
+.t-white{background:none;color:var(--ink);padding-left:0;padding-right:2px}
+.off{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted);padding:6px 0}
+.off-toggle{display:flex;justify-content:flex-end;margin:-6px 0 4px}
+.white{display:flex;gap:6px;align-items:center;font-size:13px;margin:-2px 0 8px}
+.white input{width:70px}
+.white select{width:auto}
+.linkbtn{border:0;background:none;color:var(--gold);padding:0 4px;font-size:12px;text-decoration:underline}
+.bar{height:3px;border-radius:2px;background:var(--gold);opacity:.55;margin-top:2px}
+.sub{font-size:11px;color:var(--muted);font-weight:400}
+td.st{text-align:left;font-size:13px;font-weight:700}
+.st.over,.tally .over{color:var(--red)} .st.short,.tally .short{color:var(--legend)} .st.full,.tally .full{color:var(--set)}
+.tally{display:flex;gap:12px;font-size:13px;font-weight:700;margin-bottom:6px}
+.warns{margin-top:10px;background:var(--warn-bg);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--red)}
+.warns ul{margin:4px 0 0;padding-left:18px}
+.sumhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px}
+.sumhead h2{margin:0}
+.btnlink{background:var(--gold);color:#fff;border-radius:6px;padding:5px 12px;text-decoration:none}
+#imgDlg{width:min(900px,94vw)}
+.foot{font-size:12px;color:var(--muted);margin-top:10px}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);width:min(560px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog textarea{width:100%;height:240px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+
+/* 部位顏色 */
+:root{--sc-weapon:#C2410C;--sc-helm:#0E8A8A;--sc-armor:#2563EB;--sc-boots:#8B5A2B;--sc-shield:#4F46E5;--sc-ring:#B7860B;--sc-cloak:#9333EA;--sc-other:#6B7280}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--sc-weapon:#FB8A4C;--sc-helm:#3CCFCF;--sc-armor:#6FA2FF;--sc-boots:#D39A62;--sc-shield:#9A94FF;--sc-ring:#F2C14E;--sc-cloak:#C98BFF;--sc-other:#A7B0BD}}
+:root[data-theme="dark"]{--sc-weapon:#FB8A4C;--sc-helm:#3CCFCF;--sc-armor:#6FA2FF;--sc-boots:#D39A62;--sc-shield:#9A94FF;--sc-ring:#F2C14E;--sc-cloak:#C98BFF;--sc-other:#A7B0BD}
+.sc-weapon{--sc:var(--sc-weapon)} .sc-helm{--sc:var(--sc-helm)} .sc-armor{--sc:var(--sc-armor)} .sc-boots{--sc:var(--sc-boots)}
+.sc-shield{--sc:var(--sc-shield)} .sc-ring{--sc:var(--sc-ring)} .sc-cloak{--sc:var(--sc-cloak)} .sc-other{--sc:var(--sc-other)}
+.slot{border-left:6px solid var(--sc,var(--line));background:linear-gradient(180deg,color-mix(in srgb,var(--sc,transparent) 12%,var(--panel2)) 0,var(--panel2) 64px)}
+.slot-head input[data-f="name"]{color:var(--sc,var(--ink))}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>裝備計數<small>紋章 + 套裝 + 藍屬 / 紅屬 / 傳說 總和</small></h1>
+  <div class="builds">
+    <select id="buildSel" aria-label="選擇配置"></select>
+    <button id="bNew">新配置</button>
+    <button id="bDup">複製</button>
+    <button id="bRen">改名</button>
+    <button id="bDel">刪除</button>
+    <button id="bIO">匯入 / 匯出</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <main>
+    <section class="box">
+      <h2><span class="swatch" style="background:var(--crest)"></span>紋章 G4</h2>
+      <div class="row" style="margin-bottom:8px">
+        <label class="row" style="gap:6px">職業類別 <select id="clsSel" aria-label="職業類別"></select></label>
+        <span class="hint">決定傳說屬性可以出哪些</span>
+      </div>
+      <div class="row">
+        <select id="crestSel" aria-label="紋章"></select>
+        <span class="hint">可與藍屬疊加</span>
+      </div>
+      <div class="chips" id="crestChips"></div>
+    </section>
+
+    <section class="box">
+      <h2><span class="swatch" style="background:var(--set)"></span>套裝加成</h2>
+      <div class="row">
+        <select id="setSel" aria-label="套裝職業"></select>
+        <div class="seg" id="tierSeg" role="group" aria-label="轉數">
+          <button data-t="0">無</button><button data-t="1">一轉 G6</button><button data-t="2">二轉 G7</button><button data-t="3">三轉 G8</button>
+        </div>
+      </div>
+      <div class="setvals" id="setVals"></div>
+      <p class="hint" id="setHint" style="margin:8px 0 0"></p>
+    </section>
+
+    <section class="box">
+      <h2><span class="swatch" style="background:var(--gold)"></span>裝備</h2>
+      <div class="slots" id="slots"></div>
+      <div class="adds" style="margin-top:12px"><button id="addSlot">新增部位</button><button id="restoreSlots">補回預設部位</button><button id="clearAll">清空所有裝備屬性</button></div>
+    </section>
+  </main>
+
+  <aside>
+    <div class="sum">
+      <div class="sumhead"><h2 id="sumTitle">屬性總和</h2><button id="bImg">匯出圖片</button></div>
+      <div class="legend-keys">
+        <span><i style="background:var(--crest)"></i>紋章</span>
+        <span><i style="background:var(--white)"></i>白屬（白防 / 白攻 / 白血）</span>
+        <span><i style="background:var(--set)"></i>套裝</span>
+        <span><i style="background:var(--blue)"></i>藍屬</span>
+        <span><i style="background:var(--red)"></i>紅屬</span>
+        <span><i style="background:var(--legend)"></i>傳說 / 自訂</span>
+      </div>
+      <div class="tablewrap" id="sumTable"></div>
+      <div id="warns"></div>
+      <p class="foot">上限＝藍屬上限＋紋章＋白屬＋紅屬（這些可與藍屬疊加，不佔上限；套裝與傳說佔上限）；超過上限的部分不計入總計；「相當 G」用扣掉紋章、白屬、紅屬後的數值計算。藍屬 G1–G15、紅屬 H1–H15 依官方數值表；G16–G20 以 G15 到上限等分估算，與遊戲實際不同時可直接改數字。</p>
+    </div>
+  </aside>
+</div>
+
+<dialog id="imgDlg">
+  <h3 style="margin-top:0">屬性總和圖片</h3>
+  <p class="hint">按「下載圖片」儲存；手機可以長按圖片儲存或分享。</p>
+  <div style="overflow:auto;max-height:60vh;border:1px solid var(--line);border-radius:6px"><img id="imgPrev" alt="屬性總和圖片" style="display:block;max-width:100%"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:10px">
+    <a id="imgDl" class="btnlink">下載圖片</a>
+    <button id="imgClose">關閉</button>
+  </div>
+</dialog>
+<dialog id="io">
+  <h3 style="margin-top:0">匯入 / 匯出</h3>
+  <p class="hint">複製下方文字即可備份全部配置；貼上別人的文字後按「匯入」會取代目前所有配置。</p>
+  <textarea id="ioText" spellcheck="false"></textarea>
+  <div class="row" style="justify-content:flex-end;margin-top:10px">
+    <span class="hint" id="ioMsg" style="margin-right:auto"></span>
+    <button id="ioCopy">複製</button>
+    <button id="ioImport" class="primary">匯入</button>
+    <button id="ioClose">關閉</button>
+  </div>
+</dialog>
+
+<script>
+/* ---------- 藍屬（依組別） ---------- */
+// [英文, 計算屬性, G10 數值, 上限值]
+/* ---------- 藍屬數值表（G1–G15，官方） ---------- */
+const L = (a,b,st)=>Array.from({length:15},(_,i)=>a+st*i);
+const T_HIT=[3,7,13,21,25,28,31,33,35,37,39,41,42,43,44];
+const T_REC=[3,6,12,19,21,23,28,33,37,41,44,47,50,52,55];
+const T_ATTR=[3,7,14,25,28,33,38,43,48,53,58,63,68,73,78];
+const T_STAY=[16,32,48,76,104,136,156,172,188,204,220,236,248,264,280];
+const T_S22=[2,3,5,7,9,12,15,17,19,22,24,25,26,27,28];
+const T_B105=[10,15,24,34,43,58,72,82,91,105,115,120,125,129,134];
+const T_POOL=[30,70,140,250,280,330,380,430,480,530,580,630,680,730,780];
+const T_RES=L(4,0,4);
+const T_SNAG=[3,5,7,10,13,15,17,19,20,21];
+// 屬性：[數值表, 上限]
+const BV = {
+ "物攻":[L(10,0,10),200], "命中":[T_HIT,37],
+ "施法縮時":[[3,6,12,19,23,28,33,37,41,44,47,47,52,55,57].map(v=>-v),-50],
+ "集氣維持":[[3,6,12,19,23,28,33,37,41,44,47,50,52,55,57],44],
+ "遠攻":[[6,11,16,21,26,29,33,37,40,43,46,49,51,52,54],86],
+ "詛咒":[[8,16,24,38,52,68,78,86,94,102,110,118,124,132,140],204],
+ "補助":[T_STAY,408], "保護":[[10,20,32,50,68,90,104,114,124,136,146,156,164,176,186],272],
+ "無視":[[2,4,7,12,14,16,20,24,28,32,36,40,44,48,52],32],
+ "AC":[[6,11,17,22,28,33,39,44,50,55,61,66,72,77,83],110], "物理回避":[T_HIT,37],
+ "冰抗":[T_RES,80],"毒抗":[T_RES,80],"電抗":[T_RES,80],"火抗":[T_RES,80],"麻痹抗":[T_RES,80],"聖抗":[T_RES,80],"全抗":[T_RES,40],
+ "移動力":[[4,8,11,15,19,23,26,30,34,38,55,60,65,70,75],38],
+ "HP":[[1752,2856,3948,5052,6144,7236,8340,9432,10536,11628,12720,13824,14916,16020,17124],11628],
+ "MP":[T_POOL,1060], "聖力值":[T_POOL,1060],
+ "體力":[[23,32,42,53,65,77,87,96,104,112,119,126,131,131,131],224],
+ "回血":[T_REC,41],"回藍":[T_REC,41],"回綠":[T_REC,41],
+ "力量":[T_ATTR,106],"敏捷":[T_ATTR,106],"體質":[T_ATTR,106],"智慧":[T_ATTR,106],"智力":[T_ATTR,106],"魅力":[T_ATTR,106],"耐力":[T_ATTR,106],"移動（能力值）":[T_ATTR,106],"幸運":[T_ATTR,106],"魔法能量":[T_ATTR,106],"神聖能量":[T_ATTR,106],
+ "法術穿透":[L(1,0,2).map((v,i)=>i===0?1:i*2),18],
+ "魔增":[L(12,0,12),240],"聖增":[L(12,0,12),240],"魔持":[T_STAY,408],"聖持":[T_STAY,408],
+ "暴擊":[[2,4,8,12,16,20,24,28,32,36,40,44,46,48,50],36], "魔法回避":[T_HIT,37],
+ "大奪藍":[T_B105,105],"小奪藍":[T_S22,22],"大奪綠":[T_B105,105],"小奪綠":[T_S22,22],
+ "大奪血":[[18,27,45,63,82,109,136,155,173,200,219,228,237,246,255],200],"小奪血":[T_S22,22],
+ "大奪體":[[1,2,4,6,7,10,13,15,17,19,21,23,24,26,28],19],"小奪體":[[2,3,5,7,9,12,15,17,19,22,24,26,28,30,32],22],
+ "小反射":[T_REC,41],"大反射":[[27,54,91,127,173,209,255,301,337,374,401,428,456,474,502],374],
+ "麻痹":[T_SNAG,21],"混亂":[T_SNAG,21],"中毒":[T_SNAG,21],"石化":[T_SNAG,21],"緩慢":[T_SNAG,21]
+};
+const GROUPS = [
+ ["force","Force Group",[["force","物攻"],["accurate","命中"],["weary","大奪體"],["desire","大奪血"]]],
+ ["distant","Distance Group",[["distant","遠攻"],["critical","暴擊"],["fatigue","小奪體"],["robber","小奪血"]]],
+ ["hardest","Hardest Group",[["hardest","AC"],["smart","物理回避"],["strike","大反射"],["counter attack","小反射"]]],
+ ["snag","Snag Group",[["snag","麻痹"],["vertigly","混亂"],["poison","中毒"],["stiff","石化"],["slack","緩慢"]]],
+ ["life","Life Group",[["life","HP"],["fatal","回血"],["health","體力"],["speed","移動力"]]],
+ ["mana","Mana Group",[["mana","MP"],["magic","回藍"],["wise","施法縮時"],["bear","集氣維持"]]],
+ ["divine","Divine Group",[["divine","聖力值"],["nature","回綠"],["wise","施法縮時"],["bear","集氣維持"]]],
+ ["mv","Magic Vigor Group",[["magic vigor","魔增"],["magic stay","魔持"],["speed","移動力"]]],
+ ["nv","Nature Vigor Group",[["nature vigor","聖增"],["nature stay","聖持"],["speed","移動力"]]],
+ ["curse","Rising Group",[["curse","詛咒"],["aid","補助"],["masking","保護"],["basic resist","無視"]]],
+ ["str","Strength Group",[["strength","力量"],["endurance","耐力"],["constitution","體質"]]],
+ ["dex","Dexterity Group",[["dexterity","敏捷"],["constitution","體質"],["movement","移動（能力值）"]]],
+ ["int","Wizard Group",[["intelligence","智力"],["wizard","魔法能量"],["devil","小奪藍"],["witch","大奪藍"]]],
+ ["wis","Priest Group",[["wisdom","智慧"],["priest","神聖能量"],["evil","大奪綠"],["satan","小奪綠"],["ghost","看魂"]]],
+ ["ice","Resist Group1",[["resist freeze","冰抗"],["resist all","全抗"],["evasion","魔法回避"],["resist venom","毒抗"]]],
+ ["elec","Resist Group2",[["resist lighting","電抗"],["resist all","全抗"],["evasion","魔法回避"],["resist paralysis","麻痹抗"]]],
+ ["fire","Resist Group3",[["resist blaze","火抗"],["resist all","全抗"],["evasion","魔法回避"],["resist holy","聖抗"]]],
+ ["other","其他（組別未知）",[["charisma","魅力"],["lucky","幸運"],["spell penetration","法術穿透"]]]
+];
+const E = {}; const BY_STAT = {}; const BLUE_ORDER = [];
+GROUPS.forEach(([gid,gname,list])=>list.forEach(([en,stat])=>{
+  const id=gid+"."+en.replace(/\s+/g,"_");
+  const bv=BV[stat], vals=bv?bv[0]:null, max=bv?bv[1]:1;
+  const n=vals?vals.length:1, last=vals?vals[n-1]:1;
+  // 數值表到 G15 仍未到上限且還在成長 → 以 G15 到上限等分延伸到 G20
+  const grow = vals && n===15 && Math.abs(last)<Math.abs(max) && vals[14]!==vals[13];
+  const maxG = vals? (grow?20:n) : 1;
+  E[id]={id,gid,gname,en,stat,vals,g10:vals?vals[Math.min(9,n-1)]:1,max,maxG,n};
+  if(!BY_STAT[stat]) BY_STAT[stat]=E[id];
+  if(!BLUE_ORDER.includes(stat)) BLUE_ORDER.push(stat);
+}));
+function eVal(e,g){
+  if(!e.vals) return 1;
+  if(g<=e.n) return e.vals[g-1];
+  const last=e.vals[e.n-1];
+  return Math.round((last+(e.max-last)*(g-e.n)/(20-e.n))*100)/100;
+}
+const LEG_G = 8, LEG_MAXG = 10;
+function legVal(stat,g){ const e=BY_STAT[stat]; return e? eVal(e,g) : null; }
+function newLegend(stat){ const v=legVal(stat,LEG_G); return {type:"legend",stat,g:LEG_G,value:v==null?0:v}; }
+/* ---------- 紅屬 HIGH 數值表（H1–H15） ---------- */
+const P = (arr)=>arr.concat(Array(15-arr.length).fill(arr[arr.length-1]));
+const RV = {
+ "物攻":[L(5,0,5),60], "AC":[[3,6,9,11,14,17,20,22,25,28,31,33,36,39,42],33],
+ "HP":[[876,1428,1974,2526,3072,3618,4170,4716,5268,5814,6360,6912,7458,8010,8562],6912],
+ "魔增":[L(6,0,6),72], "聖增":[L(6,0,6),72], "全抗":[L(1,0,1),12],
+ "無視":[P([1,2,4,6,7,8]),8], "暴擊":[P([1,2,4,6,8,10]),10], "遠攻":[P([3,6,8,11,13,15]),13],
+ "大奪血":[P([9,14,26,32,41,55]),55], "小奪血":[P([1,2,3,4,5,6]),6],
+ "物理回避":[P([2,4,7,10,13,15]),15], "魔法回避":[P([2,4,7,10,13,15]),15], "命中":[P([2,4,7,10,13,15]),15],
+ "移動力":[P([2,4,6,8,10,12]),12], "大反射":[P([13,27,46,64,87,105]),105], "小反射":[P([1,3,5,7,10,12]),12],
+ "聖力值":[P([14,31,62,111,124,146]),146], "MP":[P([14,31,62,111,124,146]),146]
+};
+const RED = Object.fromEntries(Object.entries(RV).map(([k,v])=>[k,v[1]]));
+function rVal(stat,h){ const r=RV[stat]; return r? r[0][Math.min(h,15)-1] : 0; }
+function rCapH(stat){ const r=RV[stat]; if(!r) return 1; const i=r[0].findIndex(v=>v>=r[1]); return i<0?15:i+1; }
+function newRed(stat){ const h=rCapH(stat); return {type:"red",stat,h,value:rVal(stat,h)}; }
+const EXTRA = ["魔抗"];
+const PCT = new Set(["命中","遠攻","物理回避","回血","回藍","回綠","施法縮時","集氣維持","魔持","聖持","無視","魔法回避"]);
+const SEC = new Set(["麻痹","混亂","中毒","石化","緩慢","詛咒","補助","保護"]);
+/* 舊名稱 → 新名稱 */
+const RENAME = {"攻奪":"大奪血","血奪":"小奪血","物反":"大反射","血反":"小反射","速度":"移動力","施法":"施法縮時","減速":"緩慢","偷取健康":"大奪體","盾牌魔法穿透":"法術穿透","魔傷":"魔增","聖傷":"聖增","聖力":"聖力值","魔力":"MP"};
+const ALL = [...BLUE_ORDER];
+for (const k of Object.keys(RED)) if(!ALL.includes(k)) ALL.push(k);
+for (const k of EXTRA) if(!ALL.includes(k)) ALL.push(k);
+const ORDER = Object.fromEntries(ALL.map((n,i)=>[n,i]));
+
+const JOBS = [
+ {g:"戰士",list:[
+  ["至尊騎士","Lord Knight",{AC:28,物攻:50},["物攻","AC"]],
+  ["狂戰士","Swashbuckler",{物攻:50,移動力:19},["物攻","移動力"]],
+  ["武聖","War Master",{命中:25,大奪血:82},["物攻","命中"]],
+  ["魔戰神","Blade Singer",{魔抗:20,物攻:50},["物攻","暴擊"]],
+  ["聖武士","Paladin",{物理回避:25,物攻:50},["物攻","魔法回避"]]]},
+ {g:"盜賊",list:[
+  ["狼牙","Corsair",{AC:28,物攻:50},["物攻","AC"]],
+  ["夜鷹","Nighthawk",{命中:25,大奪血:82},["物攻","命中"]],
+  ["俠盜","Vigilante",{物攻:50,遠攻:26},["物攻","遠攻"]],
+  ["幻影魔盜","Toreador",{魔抗:10,物攻:50},["物攻","暴擊"]],
+  ["神逐者","Revenant",{物理回避:25,物攻:50},["物攻","魔法回避"]]]},
+ {g:"弓箭手",list:[
+  ["征服之翼","Conqueror",{AC:28,物攻:50},["物攻","AC"]],
+  ["浪人箭神","Desperado",{物攻:50,遠攻:26},["物攻","遠攻"]],
+  ["神鷹之眼","Hawkeye",{命中:25,大奪血:82},["物攻","命中"]],
+  ["魔箭神","Trigger Mage",{魔抗:10,物攻:50},["物攻","暴擊"]],
+  ["神臨箭士","Warsaint",{物理回避:25,物攻:50},["物攻","魔法回避"]]]},
+ {g:"巫師",list:[
+  ["魔戰巫師","Warlock",{AC:28,魔增:60},["魔增","AC"]],
+  ["大占卜師","Tzigane",{移動力:19,魔增:60},["魔增","移動力"]],
+  ["超法師","Archmage",{AC:28,物理回避:25},["魔增","物理回避"]],
+  ["大賢者","Grand Wizard",{魔增:60,法術穿透:8},["魔增","無視"]]]},
+ {g:"祭司",list:[
+  ["聖殿騎士","Templar",{AC:28,HP:6144},["AC","HP"]],
+  ["墮天使","Fallen",{AC:28,移動力:19},["AC","移動力"]],
+  ["神之怒","Avenger",{AC:28,物理回避:25},["AC","魔法回避"]],
+  ["聖者","Saint",{AC:28,施法縮時:-23},["AC","聖增"]]]}
+];
+const LNAME = {"攻擊":"物攻","物理攻击":"物攻","遠攻":"遠攻","物理反射":"大反射","物理奪取":"大奪血","魔法迴避":"魔法回避","血量反射":"小反射","血量奪取":"小奪血","命中":"命中","魔法抗性":"魔抗","暴擊":"暴擊","物理迴避":"物理回避","物理防御":"AC","移動":"移動力","巫師法傷":"魔增","祭司法傷":"聖增","魔法無視":"無視","血量":"HP","輔助加持":"補助","保護加持":"保護","施法加速":"施法縮時"};
+const LEGEND = {
+ "戰士":{w:["攻擊"],a:["物理反射","物理奪取","魔法迴避","血量反射","血量奪取","命中","魔法抗性","暴擊","物理迴避","物理防御","移動"]},
+ "盜賊":{w:["攻擊","遠攻"],a:["物理奪取","血量奪取","魔法迴避","暴擊","魔法抗性","物理迴避","命中","物理防御","遠攻","移動"]},
+ "弓箭手":{w:["攻擊","遠攻"],a:["物理奪取","血量奪取","魔法迴避","暴擊","魔法抗性","物理迴避","命中","物理防御","遠攻","移動"]},
+ "巫師":{w:["巫師法傷","魔法無視"],a:["魔法無視","物理防御","物理迴避","血量","輔助加持","保護加持","移動","巫師法傷"]},
+ "祭司":{w:["施法加速","祭司法傷","魔法無視","物理攻击"],a:["物理反射","血量反射","魔法抗性","魔法迴避","物理迴避","移動","施法加速","物理防御","輔助加持","保護加持","血量","祭司法傷","魔法無視"]}
+};
+const JOB = {}, JOBCLASS = {};
+JOBS.forEach(g=>g.list.forEach(([n,en,st,set])=>{JOB[n]={n,en,st,set};JOBCLASS[n]=g.g;}));
+const TIER_G = {1:6,2:7,3:8};
+/* 紋章：有數值表的屬性取 G4；魔抗沒有數值表，照原資料 */
+const CREST_G = 4;
+function crestStats(j){ const o={}; for(const [k,v] of Object.entries(j.st)){ o[k] = BV[k]? BV[k][0][CREST_G-1] : v; } return o; }
+/* 白防（各職業防具基本 AC，可與藍屬疊加） */
+const WHITE_AC = {
+ "弓箭手":{頭盔:13,鎧甲:36,靴子:0,盾牌:0},
+ "戰士":{武器:0,頭盔:13,鎧甲:41,靴子:0,盾牌:41},
+ "盜賊":{頭盔:13,鎧甲:36,靴子:0,盾牌:34},
+ "祭司":{頭盔:13,鎧甲:36,靴子:2,盾牌:34},
+ "巫師":{頭盔:13,鎧甲:36,靴子:2,盾牌:31}
+};
+function whitePos(s){ return ["武器","頭盔","鎧甲","靴子","盾牌"].find(k=>(s.name||"").includes(k)) || null; }
+const CLOAK = {atk:{name:"攻披",ac:10,atk:48,range:"30–48"}, def:{name:"防披",ac:24}, hp:{name:"血披",ac:10,hp:5000}};
+const isCloak = s => slotKind(s)==="c";
+function whiteAtk(s){ const c=CLOAK[s.cloak]; if(!isCloak(s)||!c||!c.atk) return 0; return s.watk!=null? s.watk : c.atk; }
+function whiteHP(s){ const c=CLOAK[s.cloak]; return (isCloak(s)&&c&&c.hp)? c.hp : 0; }
+function whiteShown(s){ if(isCloak(s)) return !!CLOAK[s.cloak]; const pos=whitePos(s); if(pos==="武器") return B().cls==="戰士"; return !!pos || s.wac!=null; }
+function whiteAuto(s){ if(isCloak(s)) return CLOAK[s.cloak]?CLOAK[s.cloak].ac:0; const t=WHITE_AC[B().cls], pos=whitePos(s); return (t&&pos&&t[pos]!=null)? t[pos] : 0; }
+const NO_SHIELD = ["祭司","巫師"];
+function isShield(s){ return whitePos(s)==="盾牌"; }
+function slotOn(s){ if(!isShield(s)) return true; return s.on!=null ? s.on : !NO_SHIELD.includes(B().cls); }
+function whiteAC(s){ if(!whiteShown(s)) return 0; return (s.wac!=null) ? s.wac : whiteAuto(s); }
+const KINDS = {w:["武器",99],a:["防具",99],r:["戒指",3],c:["披風",3]};
+const DEFAULT_SLOTS = [["武器","w"],["頭盔","a"],["鎧甲","a"],["靴子","a"],["盾牌","a"],["戒指 1","r"],["戒指 2","r"],["披風","c"]];
+const slotKind = s => s.kind || "a";
+const slotCap = s => KINDS[slotKind(s)][1];
+const hasLegend = s => ["w","a"].includes(slotKind(s));
+const gradeMax = (e,s) => Math.min(e.maxG, slotCap(s));
+
+/* ---------- 工具 ---------- */
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const unit = s=>PCT.has(s)?"%":SEC.has(s)?"秒":"";
+function fmt(n){ if(!isFinite(n)) return "0"; const r=Math.round(n*100)/100; return r.toLocaleString("zh-TW",{maximumFractionDigits:2}); }
+function statOpts(list,sel){ return list.map(s=>`<option ${s===sel?"selected":""}>${esc(s)}</option>`).join(""); }
+function blueOpts(sel){
+  return GROUPS.map(([gid,gname,list])=>`<optgroup label="${gname}">${list.map(([en])=>{const id=gid+"."+en.replace(/\s+/g,"_");const e=E[id];return `<option value="${id}" ${id===sel?"selected":""}>${esc(e.stat)}　${esc(en)}</option>`;}).join("")}</optgroup>`).join("");
+}
+
+/* ---------- 狀態 ---------- */
+const KEY="eqcalc.v2";
+function newBuild(name){ return {name, cls:"", crest:"", setJob:"", setTier:0, setVals:[null,null], slots:DEFAULT_SLOTS.map(([n,k])=>({name:n,kind:k,lines:[]}))}; }
+let store;
+try{ store = JSON.parse(localStorage.getItem(KEY)); }catch(e){ store=null; }
+if(!store || !Array.isArray(store.builds) || !store.builds.length) store={builds:[newBuild("配置 1")],cur:0};
+if(store.cur>=store.builds.length) store.cur=0;
+store.builds.forEach(b=>{ (b.slots||[]).forEach(sl=>{ sl.lines=(sl.lines||[]).filter(l=>l.type!=="blue"||E[l.id]); }); });
+store.builds.forEach(b=>b.slots.forEach(sl=>sl.lines.forEach(l=>{ if(l.type==="blue"){ if(E[l.id]) l.value=eVal(E[l.id],Math.min(l.g||1,E[l.id].maxG)); } else { if(RENAME[l.stat]) l.stat=RENAME[l.stat]; if(l.type==="red"&&RV[l.stat]&&!l.h){ const vs=RV[l.stat][0]; let h=vs.findIndex(v=>v>=l.value); l.h=h<0?15:h+1; l.value=vs[l.h-1]; } if(l.type==="legend"&&!l.g){ l.g=LEG_G; const v=legVal(l.stat,LEG_G); if(v!=null&&!l.value) l.value=v; } } })));
+const B = ()=>store.builds[store.cur];
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(store)); }catch(e){} }
+
+/* ---------- 配置列 ---------- */
+function renderBuilds(){
+  $("#buildSel").innerHTML = store.builds.map((b,i)=>`<option value="${i}" ${i===store.cur?"selected":""}>${esc(b.name)}</option>`).join("");
+  $("#bDel").disabled = store.builds.length<2;
+}
+$("#buildSel").onchange=e=>{store.cur=+e.target.value;save();renderAll();};
+$("#bNew").onclick=()=>{store.builds.push(newBuild("配置 "+(store.builds.length+1)));store.cur=store.builds.length-1;save();renderAll();};
+$("#bDup").onclick=()=>{const c=JSON.parse(JSON.stringify(B()));c.name+=" 複本";store.builds.push(c);store.cur=store.builds.length-1;save();renderAll();};
+$("#bRen").onclick=()=>{const n=prompt("配置名稱",B().name);if(n&&n.trim()){B().name=n.trim();save();renderAll();}};
+$("#bDel").onclick=()=>{if(store.builds.length<2)return;if(!confirm(`刪除「${B().name}」？`))return;store.builds.splice(store.cur,1);store.cur=Math.max(0,store.cur-1);save();renderAll();};
+
+/* ---------- 職業 / 紋章 ---------- */
+function jobSelect(sel){
+  const cls=B().cls;
+  return `<option value="">不使用</option>`+JOBS.filter(g=>!cls||g.g===cls).map(g=>`<optgroup label="${g.g}">${g.list.map(([n,en])=>`<option value="${n}" ${n===sel?"selected":""}>${n} ${en}</option>`).join("")}</optgroup>`).join("");
+}
+function renderCls(){ $("#clsSel").innerHTML=`<option value="">不限</option>`+Object.keys(LEGEND).map(c=>`<option ${c===B().cls?"selected":""}>${c}</option>`).join(""); }
+function resetShield(){ B().slots.forEach(sl=>{ if(isShield(sl)) delete sl.on; }); }
+$("#clsSel").onchange=e=>{B().cls=e.target.value;resetShield();
+  const c=B().cls; if(c){ if(B().crest&&JOBCLASS[B().crest]!==c) B().crest=""; if(B().setJob&&JOBCLASS[B().setJob]!==c){ B().setJob=""; B().setVals=[null,null]; } }
+  renderCrest(); renderSet();save();renderSlots();renderSummary();};
+function renderCrest(){
+  $("#crestSel").innerHTML = jobSelect(B().crest);
+  const j=JOB[B().crest];
+  $("#crestChips").innerHTML = j ? Object.entries(crestStats(j)).map(([k,v])=>`<span class="chip" style="color:var(--crest)">${esc(k)} ${v>0?"+":""}${fmt(v)}${unit(k)}</span>`).join("") : `<span class="hint">未選擇紋章</span>`;
+}
+$("#crestSel").onchange=e=>{B().crest=e.target.value;if(JOBCLASS[B().crest]&&B().cls!==JOBCLASS[B().crest]){B().cls=JOBCLASS[B().crest];resetShield();}save();renderCls();renderCrest();renderSlots();renderSummary();};
+
+/* ---------- 套裝 ---------- */
+function setAuto(stat,tier){ const e=BY_STAT[stat]; return e? eVal(e,TIER_G[tier]) : 0; }
+function renderSet(){
+  const b=B();
+  $("#setSel").innerHTML = jobSelect(b.setJob);
+  document.querySelectorAll("#tierSeg button").forEach(x=>x.setAttribute("aria-pressed", String(+x.dataset.t===b.setTier)));
+  const j=JOB[b.setJob];
+  if(!j||!b.setTier){ $("#setVals").innerHTML=""; $("#setHint").textContent = j? "選擇轉數後套用加成。" : "選擇套裝職業與轉數（一轉 G6+G6、二轉 G7+G7、三轉 G8+G8）。"; return; }
+  $("#setVals").innerHTML = j.set.map((s,i)=>{
+    const v = b.setVals[i]==null ? setAuto(s,b.setTier) : b.setVals[i];
+    return `<label><span>${esc(s)} <span class="hint">G${TIER_G[b.setTier]}</span></span><span><input type="number" step="any" class="num" data-sv="${i}" value="${v}">${unit(s)}</span></label>`;
+  }).join("");
+  const unknown = j.set.filter(s=>!BY_STAT[s]);
+  let h = "數值依藍屬等級換算，可自行修改。巫師法傷以魔增、祭司法傷以聖增計算。";
+  if(unknown.length) h += `「${unknown.join("、")}」沒有藍屬對照，請填入實際數值。`;
+  $("#setHint").textContent=h;
+}
+$("#setSel").onchange=e=>{B().setJob=e.target.value;B().setVals=[null,null];save();renderSet();renderSummary();};
+$("#tierSeg").onclick=e=>{const t=e.target.closest("button");if(!t)return;B().setTier=+t.dataset.t;B().setVals=[null,null];save();renderSet();renderSummary();};
+$("#setVals").oninput=e=>{const i=e.target.dataset.sv;if(i==null)return;const v=parseFloat(e.target.value);B().setVals[+i]=isNaN(v)?0:v;save();renderSummary();};
+
+/* ---------- 裝備 ---------- */
+const TYPE = {blue:["藍","t-blue"],red:["紅","t-red"],legend:["傳說","t-legend"],other:["自訂","t-other"]};
+function legendPool(si){
+  const b=B(), pool=LEGEND[b.cls];
+  if(!pool) return ALL.map(s=>[s,s]);
+  const seen=new Set(), out=[];
+  for(const n of pool[slotKind(b.slots[si])==="w"?"w":"a"]){ const st=LNAME[n]; if(seen.has(st)) continue; seen.add(st); out.push([st, n===st?n:`${n}（${st}）`]); }
+  return out;
+}
+function legendOpts(si,sel){
+  const p=legendPool(si); if(sel && !p.some(x=>x[0]===sel)) p.push([sel,sel+"（不在此池）"]);
+  return p.map(([v,t])=>`<option value="${esc(v)}" ${v===sel?"selected":""}>${esc(t)}</option>`).join("");
+}
+function blueCapInfo(l,slot){
+  const e=E[l.id], gm=gradeMax(e,slot), m=eVal(e,gm);
+  const over = Math.abs(l.value)>Math.abs(m)+1e-9;
+  const txt = `${e.gname}｜G10 ${fmt(e.g10)}${unit(e.stat)}・上限 ${fmt(e.max)}${unit(e.stat)}`+(slotCap(slot)<e.maxG?`・此部位最高 G${gm}（${fmt(m)}）`:"")+(over?"（超過上限）":"");
+  return {over,txt};
+}
+function lineHTML(l,si,li){
+  const slot=B().slots[si], d=`data-s="${si}" data-l="${li}"`;
+  let statCtl, gradeCtl="<span></span>", cap="";
+  const stat = l.type==="blue"? E[l.id].stat : l.stat;
+  if(l.type==="blue"){
+    const e=E[l.id], gm=gradeMax(e,slot);
+    statCtl=`<select ${d} data-f="id" aria-label="屬性">${blueOpts(l.id)}</select>`;
+    gradeCtl=`<select class="g" ${d} data-f="g" aria-label="等級">${Array.from({length:gm},(_,i)=>`<option value="${i+1}" ${l.g===i+1?"selected":""}>G${i+1}</option>`).join("")}</select>`;
+    const c=blueCapInfo(l,slot); cap=`<div class="cap ${c.over?"over":""}">${c.txt}</div>`;
+  } else if(l.type==="red"){
+    statCtl=`<select ${d} data-f="stat" aria-label="屬性">${statOpts(Object.keys(RED),l.stat)}</select>`;
+    gradeCtl=`<select class="g" ${d} data-f="h" aria-label="等級">${Array.from({length:15},(_,i)=>`<option value="${i+1}" ${l.h===i+1?"selected":""}>H${i+1}</option>`).join("")}</select>`;
+    const m=RED[l.stat], over=l.value>m;
+    cap=`<div class="cap ${over?"over":""}">紅屬上限：${fmt(m)}${unit(l.stat)}${over?"（超過上限）":""}</div>`;
+  } else if(l.type==="legend"){
+    statCtl=`<select ${d} data-f="stat" aria-label="屬性">${legendOpts(si,l.stat)}</select>`;
+    gradeCtl=`<select class="g" ${d} data-f="g" aria-label="等級">${Array.from({length:LEG_MAXG},(_,i)=>`<option value="${i+1}" ${l.g===i+1?"selected":""}>G${i+1}</option>`).join("")}</select>`;
+    cap=`<div class="cap">傳說｜${B().cls||"不限職業"}・${slotKind(slot)==="w"?"武器":"防具"}池${BY_STAT[l.stat]?"":"・此屬性沒有數值表，請手動輸入"}</div>`;
+  } else {
+    statCtl=`<input type="text" ${d} data-f="stat" value="${esc(l.stat)}" placeholder="屬性名稱" aria-label="屬性名稱">`;
+  }
+  return `<div class="line"><span class="tag ${TYPE[l.type][1]}">${TYPE[l.type][0]}</span>${statCtl}${gradeCtl}<span class="num"><input type="number" step="any" ${d} data-f="value" value="${l.value}" aria-label="數值">${unit(stat)}</span><button class="x" ${d} data-act="del" aria-label="刪除此行">×</button>${cap}</div>`;
+}
+function slotColor(s){
+  const n=s.name||"";
+  const m=[["武器","sc-weapon"],["頭盔","sc-helm"],["鎧甲","sc-armor"],["靴子","sc-boots"],["盾牌","sc-shield"],["戒指","sc-ring"],["披風","sc-cloak"]].find(([k])=>n.includes(k));
+  if(m) return m[1];
+  return {w:"sc-weapon",r:"sc-ring",c:"sc-cloak"}[slotKind(s)]||"sc-other";
+}
+function renderSlots(){
+  const b=B();
+  $("#slots").innerHTML = b.slots.map((s,si)=>`
+    <div class="slot ${slotColor(s)}">
+      <div class="slot-head">
+        <input type="text" value="${esc(s.name)}" data-s="${si}" data-f="name" aria-label="部位名稱">
+        <select data-s="${si}" data-f="kind" data-prev="${slotKind(s)}" aria-label="部位類型">${Object.entries(KINDS).map(([k,[n,c]])=>`<option value="${k}" ${slotKind(s)===k?"selected":""}>${n}${c<99?"（≤G"+c+"）":""}</option>`).join("")}</select>
+        <button class="x" data-s="${si}" data-act="delslot" aria-label="刪除部位" title="刪除部位">×</button>
+      </div>
+      ${!slotOn(s)?`<div class="off"><span>未裝備盾牌${NO_SHIELD.includes(B().cls)&&s.on==null?`（${B().cls}預設不裝盾牌）`:""}</span><button data-s="${si}" data-act="shieldon">裝備盾牌</button></div>`:`
+      ${isShield(s)?`<div class="off-toggle"><button class="linkbtn" data-s="${si}" data-act="shieldoff">卸下盾牌</button></div>`:""}
+      ${isCloak(s)?`<div class="white"><span class="tag t-white">披風</span><select data-s="${si}" data-f="cloak" aria-label="披風類型"><option value="" ${!CLOAK[s.cloak]?"selected":""}>未選類型</option>${Object.entries(CLOAK).map(([k,c])=>`<option value="${k}" ${s.cloak===k?"selected":""}>${c.name}</option>`).join("")}</select></div>`:""}
+      ${whiteShown(s)&&whiteAtk(s)?`<div class="white"><span class="tag t-white">白攻</span> 物攻 <input type="number" step="any" class="num" data-s="${si}" data-f="watk" value="${whiteAtk(s)}" aria-label="白攻"><span class="hint">範圍 ${CLOAK.atk.range}</span></div>`:""}
+      ${whiteShown(s)&&whiteHP(s)?`<div class="white"><span class="tag t-white">白血</span> HP +${fmt(whiteHP(s))}</div>`:""}
+      ${whiteShown(s)?`<div class="white"><span class="tag t-white">白防</span> AC <input type="number" step="any" class="num" data-s="${si}" data-f="wac" value="${whiteAC(s)}" aria-label="白防">${s.wac!=null?`<button class="linkbtn" data-s="${si}" data-act="wacauto">還原預設</button>`:`<span class="hint">${isCloak(s)?CLOAK[s.cloak].name+"預設":whitePos(s)==="武器"?"戰士武器可自訂":(B().cls?B().cls+"預設":"先選職業類別")}</span>`}</div>`:""}
+      ${s.lines.length? s.lines.map((l,li)=>lineHTML(l,si,li)).join("") : `<div class="empty">尚未加入屬性</div>`}
+      <div class="adds">
+        <button class="ab-blue" data-s="${si}" data-add="blue">＋藍屬</button>
+        <button class="ab-red" data-s="${si}" data-add="red">＋紅屬</button>
+        ${hasLegend(s)?`<button class="ab-legend" data-s="${si}" data-add="legend">＋傳說</button>`:""}
+        <button data-s="${si}" data-add="other">＋自訂</button>
+      </div>`}
+    </div>`).join("");
+}
+function newBlue(id,slot){ const e=E[id], g=gradeMax(e,slot); return {type:"blue",id,g,value:eVal(e,g)}; }
+const slotsEl=$("#slots");
+slotsEl.addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t) return;
+  const b=B(), si=+t.dataset.s, slot=b.slots[si];
+  if(t.dataset.add){
+    const ty=t.dataset.add;
+    if(ty==="blue") slot.lines.push(newBlue("force.force",slot));
+    else if(ty==="red") slot.lines.push(newRed("物攻"));
+    else if(ty==="legend") slot.lines.push(newLegend(legendPool(si)[0][0]));
+    else slot.lines.push({type:"other",stat:"",value:0});
+  } else if(t.dataset.act==="wacauto"){ delete slot.wac; }
+  else if(t.dataset.act==="shieldon"){ slot.on=true; }
+  else if(t.dataset.act==="shieldoff"){ slot.on=false; }
+  else if(t.dataset.act==="del"){ slot.lines.splice(+t.dataset.l,1); }
+  else if(t.dataset.act==="delslot"){ if(slot.lines.length && !confirm(`刪除「${slot.name}」及其屬性？`)) return; b.slots.splice(si,1); }
+  else return;
+  save(); renderSlots(); renderSummary();
+});
+slotsEl.addEventListener("change",e=>{
+  const t=e.target; if(t.tagName!=="SELECT") return;
+  const slot=B().slots[+t.dataset.s], f=t.dataset.f;
+  if(f==="cloak"){ slot.cloak=t.value; delete slot.wac; delete slot.watk; save(); renderSlots(); renderSummary(); return; }
+  if(f==="kind"){
+    slot.kind=t.value;
+    if(!hasLegend(slot)){ const n=slot.lines.filter(l=>l.type==="legend").length; if(n&&!confirm(`${KINDS[slot.kind][0]}沒有傳說屬性，要移除這個部位的 ${n} 條傳說屬性嗎？`)){ slot.kind=t.dataset.prev||"a"; renderSlots(); return; } slot.lines=slot.lines.filter(l=>l.type!=="legend"); }
+    slot.lines.forEach(l=>{ if(l.type==="blue"){ const gm=gradeMax(E[l.id],slot); if(l.g>gm){ l.g=gm; l.value=eVal(E[l.id],gm);} } });
+  } else {
+    const l=slot.lines[+t.dataset.l];
+    if(l.type==="blue"){
+      if(f==="id"){ l.id=t.value; l.g=Math.min(l.g,gradeMax(E[l.id],slot)); }
+      if(f==="g") l.g=+t.value;
+      l.value=eVal(E[l.id],l.g);
+    } else if(l.type==="legend"){
+      if(f==="stat") l.stat=t.value;
+      if(f==="g") l.g=+t.value;
+      const v=legVal(l.stat,l.g); if(v!=null) l.value=v;
+    } else if(l.type==="red"){
+      if(f==="stat"){ l.stat=t.value; l.h=Math.min(l.h||rCapH(l.stat),rCapH(l.stat)); }
+      if(f==="h") l.h=+t.value;
+      l.value=rVal(l.stat,l.h);
+    } else if(f==="stat"){ l.stat=t.value; }
+  }
+  save(); renderSlots(); renderSummary();
+});
+slotsEl.addEventListener("input",e=>{
+  const t=e.target; if(t.tagName!=="INPUT") return;
+  const slot=B().slots[+t.dataset.s];
+  if(t.dataset.f==="name"){ slot.name=t.value; save(); const card=t.closest(".slot"); card.className="slot "+slotColor(slot); return; }
+  if(t.dataset.f==="watk"){ const v=parseFloat(t.value); slot.watk=isNaN(v)?0:v; save(); renderSummary(); return; }
+  if(t.dataset.f==="wac"){ const v=parseFloat(t.value); slot.wac=isNaN(v)?0:v; save(); renderSummary(); return; }
+  const l=slot.lines[+t.dataset.l];
+  if(t.dataset.f==="value"){ const v=parseFloat(t.value); l.value=isNaN(v)?0:v;
+    const cap=t.closest(".line").querySelector(".cap");
+    if(cap && l.type==="blue"){ const c=blueCapInfo(l,slot); cap.classList.toggle("over",c.over); cap.textContent=c.txt; }
+    if(cap && l.type==="red"){ const m=RED[l.stat], over=l.value>m; cap.classList.toggle("over",over); cap.textContent=`紅屬上限：${fmt(m)}${unit(l.stat)}${over?"（超過上限）":""}`; }
+  }
+  if(t.dataset.f==="stat") l.stat=t.value;
+  save(); renderSummary();
+});
+$("#restoreSlots").onclick=()=>{
+  const b=B(), names=new Set(b.slots.map(x=>x.name)), missing=DEFAULT_SLOTS.filter(([n])=>!names.has(n));
+  if(!missing.length){ const bt=$("#restoreSlots"); bt.textContent="預設部位都在"; setTimeout(()=>bt.textContent="補回預設部位",1500); return; }
+  const out=[]; DEFAULT_SLOTS.forEach(([n,k])=>{ const ex=b.slots.find(x=>x.name===n); out.push(ex||{name:n,kind:k,lines:[]}); });
+  b.slots.forEach(x=>{ if(!out.includes(x)) out.push(x); });
+  b.slots=out; save(); renderSlots(); renderSummary();
+};
+$("#addSlot").onclick=()=>{B().slots.push({name:"新部位",kind:"a",lines:[]});save();renderSlots();};
+$("#clearAll").onclick=()=>{if(!confirm("清空此配置所有裝備上的屬性？"))return;B().slots.forEach(s=>s.lines=[]);save();renderSlots();renderSummary();};
+
+/* ---------- 總和 ---------- */
+function renderSummary(){
+  const b=B(), T={}, warns=[];
+  const add=(stat,col,v)=>{ if(!stat||!v) return; (T[stat] ||= {c:0,w:0,s:0,b:0,r:0,l:0}); T[stat][col]+=v; };
+  const j=JOB[b.crest]; if(j) for(const [k,v] of Object.entries(crestStats(j))) add(k,"c",v);
+  const sj=JOB[b.setJob];
+  if(sj&&b.setTier) sj.set.forEach((s,i)=>add(s,"s", b.setVals[i]==null?setAuto(s,b.setTier):b.setVals[i]));
+  const act=b.slots.filter(slotOn);
+  act.forEach(s=>{ add("AC","w",whiteAC(s)); add("物攻","w",whiteAtk(s)); add("HP","w",whiteHP(s)); });
+  act.forEach(s=>s.lines.forEach(l=>{
+    if(l.type==="blue"){
+      add(E[l.id].stat,"b",l.value);
+      const c=blueCapInfo(l,s); if(c.over) warns.push(`${s.name}：藍屬 ${E[l.id].stat} ${fmt(l.value)} 超過此部位上限`);
+      return;
+    }
+    const col={red:"r",legend:"l",other:"l"}[l.type];
+    add(l.type==="other"?(l.stat||"").trim():l.stat,col,l.value);
+    if(l.type==="red"&&l.value>RED[l.stat]) warns.push(`${s.name}：紅屬 ${l.stat} ${fmt(l.value)} 超過上限 ${fmt(RED[l.stat])}`);
+  }));
+  $("#sumTitle").textContent = `屬性總和　${b.name}`;
+  const keys=Object.keys(T).sort((a,c)=>(ORDER[a]??999)-(ORDER[c]??999)||a.localeCompare(c));
+  if(!keys.length){ $("#sumTable").innerHTML=`<p class="hint">選擇紋章、套裝，或在裝備上加入屬性後，總和會顯示在這裡。</p>`; }
+  else {
+    const cell=(v,cls)=>`<td class="num ${v?cls:"z"}">${v?fmt(v):"–"}</td>`;
+    let nOver=0,nShort=0,nFull=0;
+    const rows=keys.map(k=>{const r=T[k],tot=r.c+r.w+r.s+r.b+r.r+r.l, u=unit(k), e=BY_STAT[k];
+      let totCell=`<td class="num total">${fmt(tot)}${u}</td>`, capCell=`<td class="num z">–</td>`, eqCell=`<td class="num z">–</td>`, stCell=`<td class="z">無上限資料</td>`;
+      if(e && e.vals){
+        const cap=e.max+r.c+r.w+r.r, a=Math.abs(tot-r.c-r.w-r.r), ac=Math.abs(e.max);
+        let capG=e.maxG; for(let g=1;g<=e.maxG;g++){ if(Math.abs(eVal(e,g))>=ac-1e-9){ capG=g; break; } }
+        let eq=0; for(let g=1;g<=e.maxG;g++){ if(Math.abs(eVal(e,g))<=a+1e-9) eq=g; else break; }
+        capCell=`<td class="num">${fmt(cap)}${u}<div class="sub">${(r.c||r.w||r.r)?`藍 ${fmt(e.max)}${u}`+(r.c?` + 紋章 ${fmt(r.c)}${u}`:"")+(r.w?` + 白屬 ${fmt(r.w)}`:"")+(r.r?` + 紅 ${fmt(r.r)}${u}`:""):"G"+capG}</div></td>`;
+        eqCell=`<td class="num">${eq?"G"+eq:"未達 G1"}</td>`;
+        if(a>ac+1e-9){ nOver++; totCell=`<td class="num total">${fmt(cap)}${u}</td>`; stCell=`<td class="st over">超出 ${fmt(a-ac)}${u}<div class="sub">超出部分不計</div></td>`; }
+        else if(Math.abs(a-ac)<1e-9){ nFull++; stCell=`<td class="st full">已滿</td>`; }
+        else { nShort++; stCell=`<td class="st short">差 ${fmt(ac-a)}${u}<div class="sub">差 ${capG-eq} G</div></td>`; }
+      }
+      return `<tr><td>${esc(k)}</td>${totCell}${capCell}${eqCell}${stCell}${cell(r.c,"c")}${cell(r.w,"w")}${cell(r.s,"s")}${cell(r.b,"b")}${cell(r.r,"r")}${cell(r.l,"l")}</tr>`;}).join("");
+    $("#sumTable").innerHTML=`<div class="tally">${nOver?`<span class="over">${nOver} 項超出</span>`:""}${nShort?`<span class="short">${nShort} 項未滿</span>`:""}${nFull?`<span class="full">${nFull} 項已滿</span>`:""}</div><table><thead><tr><th>屬性</th><th>總計</th><th>上限</th><th>相當</th><th>狀態</th><th>紋章</th><th>白屬</th><th>套裝</th><th>藍</th><th>紅</th><th>傳說</th></tr></thead><tbody>${rows}    </tbody></table>`;
+  }
+  $("#warns").innerHTML = warns.length? `<div class="warns">注意：<ul>${warns.map(w=>`<li>${esc(w)}</li>`).join("")}</ul></div>` : "";
+}
+
+/* ---------- 匯入匯出 ---------- */
+const dlg=$("#io");
+$("#bIO").onclick=()=>{$("#ioText").value=JSON.stringify(store);$("#ioMsg").textContent="";dlg.showModal();};
+$("#ioClose").onclick=()=>dlg.close();
+$("#ioCopy").onclick=async()=>{const ta=$("#ioText");ta.select();try{await navigator.clipboard.writeText(ta.value);$("#ioMsg").textContent="已複製";}catch(e){try{document.execCommand("copy");$("#ioMsg").textContent="已複製";}catch(_){$("#ioMsg").textContent="請手動複製文字";}}};
+$("#ioImport").onclick=()=>{try{const d=JSON.parse($("#ioText").value);if(!Array.isArray(d.builds)||!d.builds.length)throw 0;store={builds:d.builds,cur:Math.min(d.cur||0,d.builds.length-1)};save();renderAll();dlg.close();}catch(e){$("#ioMsg").textContent="格式不正確，請貼上完整的匯出文字。";}};
+
+/* ---------- 匯出圖片 ---------- */
+const dlP = (window.claude && window.claude.use) ? window.claude.use("downloads").catch(()=>null) : Promise.resolve(null);
+function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||"#000"; }
+function cellInfo(td){
+  const sub=td.querySelector(".sub"); let main=td.textContent;
+  if(sub) main=main.slice(0,main.length-sub.textContent.length);
+  return {main:main.trim(), sub:sub?sub.textContent.trim():"", cls:td.className};
+}
+async function makeSummaryImage(){
+  try{ await document.fonts.ready; }catch(e){}
+  const b=B(), FONT='"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  const C={bg:cssv("--panel"),ink:cssv("--ink"),muted:cssv("--muted"),line:cssv("--line"),gold:cssv("--gold"),
+    c:cssv("--crest"),w:cssv("--white"),s:cssv("--set"),b:cssv("--blue"),r:cssv("--red"),l:cssv("--legend"),over:cssv("--red"),short:cssv("--legend"),full:cssv("--set")};
+  const table=document.querySelector("#sumTable table");
+  const head = table? [...table.tHead.rows[0].cells].map(c=>c.textContent) : [];
+  const rows = table? [...table.tBodies[0].rows].map(tr=>[...tr.cells].map(cellInfo)) : [];
+  const crest = JOB[b.crest]? `${b.crest} G${CREST_G}` : "無";
+  const set = (JOB[b.setJob]&&b.setTier)? `${b.setJob} ${["","一轉 G6","二轉 G7","三轉 G8"][b.setTier]}` : "無";
+  const tally = document.querySelector("#sumTable .tally")? [...document.querySelectorAll("#sumTable .tally span")].map(s=>({t:s.textContent,col:C[s.className]||C.ink})) : [];
+  const cv=document.createElement("canvas"), x=cv.getContext("2d"), S=2, PAD=28;
+  const f=(w,sz)=>`${w} ${sz}px ${FONT}`;
+  // column widths
+  x.font=f(700,15); const colW=head.map((h,i)=>{ let w=x.measureText(h).width;
+    rows.forEach(r=>{ x.font=f(i===1?900:500,15); w=Math.max(w,x.measureText(r[i].main).width); x.font=f(400,12); w=Math.max(w,x.measureText(r[i].sub).width); }); return Math.ceil(w)+22; });
+  const tableW=colW.reduce((a,c)=>a+c,0);
+  const W=Math.max(tableW+PAD*2,560);
+  const rowH=rows.map(r=>r.some(c=>c.sub)?46:32);
+  const H=PAD+34+28+(tally.length?28:0)+10+32+rowH.reduce((a,c)=>a+c,0)+PAD+26;
+  cv.width=W*S; cv.height=H*S; x.scale(S,S);
+  x.fillStyle=C.bg; x.fillRect(0,0,W,H);
+  x.fillStyle=C.gold; x.fillRect(0,0,W,5);
+  let y=PAD+22; x.textBaseline="alphabetic";
+  x.fillStyle=C.ink; x.font=f(900,22); x.fillText(`屬性總和　${b.name}`,PAD,y);
+  y+=28; x.font=f(500,14); x.fillStyle=C.c; x.fillText(`紋章：${crest}`,PAD,y);
+  const cw=x.measureText(`紋章：${crest}`).width; x.fillStyle=C.s; x.fillText(`套裝：${set}`,PAD+cw+24,y);
+  if(tally.length){ y+=26; let tx=PAD; x.font=f(700,14); tally.forEach(t=>{ x.fillStyle=t.col; x.fillText(t.t,tx,y); tx+=x.measureText(t.t).width+18; }); }
+  y+=14;
+  if(!rows.length){ x.fillStyle=C.muted; x.font=f(400,14); x.fillText("尚未有任何屬性",PAD,y+24); }
+  else{
+    // header
+    let cx=PAD; x.font=f(500,12); x.fillStyle=C.muted;
+    head.forEach((h,i)=>{ const w=colW[i]; if(i===0||i===4){x.textAlign="left";x.fillText(h,cx+6,y+20);} else {x.textAlign="right";x.fillText(h,cx+w-6,y+20);} cx+=w; });
+    y+=32; x.strokeStyle=C.gold; x.lineWidth=1.5; x.beginPath(); x.moveTo(PAD,y-4); x.lineTo(PAD+tableW,y-4); x.stroke();
+    rows.forEach((r,ri)=>{
+      const h=rowH[ri]; cx=PAD;
+      r.forEach((c,i)=>{
+        const w=colW[i]; let col=C.ink, wt=500;
+        if(i===1) wt=900;
+        if(i===4){ col=/over/.test(c.cls)?C.over:/short/.test(c.cls)?C.short:/full/.test(c.cls)?C.full:C.muted; wt=700; }
+        if(i>=5){ const k=(c.cls.match(/\b([cwsbrl])\b/)||[])[1]; col=c.main==="–"?C.line:(C[k]||C.ink); }
+        if(i===2||i===3) col=c.main==="–"?C.line:C.ink;
+        const left=(i===0||i===4); x.textAlign=left?"left":"right"; const tx=left?cx+6:cx+w-6;
+        x.fillStyle=col; x.font=f(wt,15); x.fillText(c.main,tx,y+20);
+        if(c.sub){ x.fillStyle=C.muted; x.font=f(400,12); x.fillText(c.sub,tx,y+37); }
+        cx+=w;
+      });
+      y+=h; x.strokeStyle=C.line; x.lineWidth=1; x.beginPath(); x.moveTo(PAD,y-4); x.lineTo(PAD+tableW,y-4); x.stroke();
+    });
+  }
+  x.textAlign="left"; x.fillStyle=C.muted; x.font=f(400,11);
+  x.fillText(`裝備計數　${new Date().toLocaleString("zh-TW")}`,PAD,H-PAD+10);
+  return await new Promise(res=>cv.toBlob(res,"image/png"));
+}
+const imgDlg=document.getElementById("imgDlg");
+let lastImgUrl=null;
+document.getElementById("bImg").onclick=async()=>{
+  const btn=document.getElementById("bImg"); btn.disabled=true; btn.textContent="產生中…";
+  try{
+    const blob=await makeSummaryImage();
+    const name=`屬性總和_${B().name.replace(/[\\/:*?"<>|\s]+/g,"_")}.png`;
+    const dl=await dlP;
+    if(dl){
+      try{ await dl.save({filename:name,data:blob}); return; }
+      catch(e){ if(e&&(e.code==="declined"||e.code==="rate_limited")) return; }
+    }
+    if(lastImgUrl) URL.revokeObjectURL(lastImgUrl);
+    lastImgUrl=URL.createObjectURL(blob);
+    document.getElementById("imgPrev").src=lastImgUrl;
+    const a=document.getElementById("imgDl"); a.href=lastImgUrl; a.download=name;
+    imgDlg.showModal();
+  } finally { btn.disabled=false; btn.textContent="匯出圖片"; }
+};
+document.getElementById("imgClose").onclick=()=>imgDlg.close();
+
+function renderAll(){ renderBuilds(); renderCls(); renderCrest(); renderSet(); renderSlots(); renderSummary(); }
+renderAll();
+</script>
+
+<!-- 使用次數統計（GoatCounter）：
+     1. 到 goatcounter.com 註冊，取一個代號，例如 mygame
+     2. 把下一行的 YOURCODE 換成你的代號，並刪掉這整段說明的開頭與結尾兩個註解符號
+<script data-goatcounter="https://YOURCODE.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+-->
+</body>
+</html>
